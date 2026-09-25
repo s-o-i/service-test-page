@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Service test</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 40rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.5;
+      }
+      code {
+        background: #f0f0f0;
+        padding: 0.1em 0.35em;
+        border-radius: 4px;
+      }
+      pre {
+        background: #111;
+        color: #eee;
+        padding: 1rem;
+        overflow: auto;
+        border-radius: 8px;
+      }
+      button {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Тест сервиса</h1>
+    <p>
+      Страница на GitHub Pages. Подставь URL API ниже и нажми «Проверить».
+    </p>
+    <p>
+      <label>
+        URL:
+        <input id="url" type="url" size="50" placeholder="https://example.com/api/health" />
+      </label>
+    </p>
+    <p><button type="button" id="go">Проверить</button></p>
+    <pre id="out">(ответ появится здесь)</pre>
+    <script>
+      document.getElementById("go").addEventListener("click", async () => {
+        const url = document.getElementById("url").value.trim();
+        const out = document.getElementById("out");
+        if (!url) {
+          out.textContent = "Укажи URL";
+          return;
+        }
+        out.textContent = "Запрос…";
+        try {
+          const res = await fetch(url, { mode: "cors" });
+          const text = await res.text();
+          out.textContent =
+            "HTTP " + res.status + "\n\n" + text.slice(0, 8000);
+        } catch (e) {
+          out.textContent =
+            "Ошибка (часто CORS): " + e.message + "\n\nПроверь заголовки на сервере.";
+        }
+      });
+    </script>
+  </body>
+</html>
