@@ -1,0 +1,270 @@
+﻿<!DOCTYPE html>
+<!-- moy-id-sc cold-start-v2: type=social_card -->
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>Мой id</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: #222;
+      background: #f6f6f6;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    p { font-size: 1rem; line-height: 1.4; }
+    .spin {
+      width: 22px;
+      height: 22px;
+      margin: 0 auto 0.85rem;
+      border: 2px solid #ddd;
+      border-top-color: #e30613;
+      border-radius: 50%;
+      animation: rot 0.7s linear infinite;
+    }
+    @keyframes rot { to { transform: rotate(360deg); } }
+    .open-link {
+      display: inline-block;
+      margin-top: 1.25rem;
+      padding: 0.65rem 1.1rem;
+      font-size: 0.95rem;
+      color: #fff;
+      background: #e30613;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+    .store-link {
+      display: none;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: #e30613;
+    }
+    .hint {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: #666;
+      max-width: 22rem;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <div class="spin" id="spin" aria-hidden="true"></div>
+    <p id="status">Запускаем «Мой ID»…</p>
+    <a class="open-link" id="openApp" href="#">Перейти в «Мой ID»</a>
+    <a class="store-link" id="storeLink" href="#">Скачать приложение</a>
+    <p class="hint" id="hint">Подождите — при первом запуске приложение может грузиться дольше обычного.</p>
+  </div>
+  <script>
+    (() => {
+      const APP_PATH = "docs/group?type=social_card";
+      const APP_SCHEME = "mosid://" + APP_PATH;
+      const ANDROID_PKG = "ru.mos.myid";
+      const IOS_STORE = "https://apps.apple.com/ru/app/%D0%BC%D0%BE%D0%B9-id/id1626803709";
+      const RUSTORE = "https://apps.rustore.ru/app/ru.mos.myid";
+      const APP_GALLERY = "https://appgallery.huawei.com/app/C107096425";
+
+      const COLD_START_GRACE_MS = 20000;
+      const STORE_OFFER_MS = 20000;
+
+      const DEEPLINK_RETRY_MS_IOS = [0, 400, 900, 1500, 2500, 4000, 6000, 9000, 12000, 16000];
+      const DEEPLINK_RETRY_MS_ANDROID = [0, 600, 1200, 2000, 3000, 4500, 6000, 8000, 10000, 12000, 14000, 16000, 18000];
+      const FOLLOWUP_AFTER_HIDE_MS = [400, 1000, 2000, 3500, 5500, 8000];
+
+      const ua = navigator.userAgent || "";
+
+      function setStatus(text) {
+        const el = document.getElementById("status");
+        if (el) el.textContent = text;
+      }
+
+      function androidIntentUrl(storeUrl, withStoreFallback) {
+        let url =
+          "intent://" +
+          APP_PATH +
+          "#Intent;scheme=mosid;package=" +
+          ANDROID_PKG +
+          ";action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;" +
+          "launchFlags=0x14000000;";
+        if (withStoreFallback && storeUrl) {
+          url += "S.browser_fallback_url=" + encodeURIComponent(storeUrl) + ";";
+        }
+        url += "end";
+        return url;
+      }
+
+      function navigateViaHiddenAnchor(url) {
+        const a = document.createElement("a");
+        a.href = url;
+        a.style.display = "none";
+        a.setAttribute("aria-hidden", "true");
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => a.remove(), 0);
+      }
+
+      function huaweiFromUa(s) {
+        return /Huawei|Honor|Harmony|HMSCore|HuaweiBrowser|OpenHarmony|HUAWEI|HONOR|HMS/i.test(s);
+      }
+
+      async function detectHuawei() {
+        if (huaweiFromUa(ua)) return true;
+        const brands = navigator.userAgentData && navigator.userAgentData.brands;
+        if (brands && brands.some((b) => /huawei|honor/i.test(b.brand || ""))) return true;
+        if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+          try {
+            const hi = await navigator.userAgentData.getHighEntropyValues(["model", "platform", "platformVersion"]);
+            const blob = [hi.model, hi.platform, hi.platformVersion].join(" ");
+            if (huaweiFromUa(blob)) return true;
+          } catch (e) {}
+        }
+        return false;
+      }
+
+      function watchAppOpened(onLeft) {
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden || document.visibilityState === "hidden") onLeft();
+        });
+        window.addEventListener("pagehide", onLeft);
+      }
+
+      function scheduleFollowUp(fireFn, isStopped) {
+        FOLLOWUP_AFTER_HIDE_MS.forEach((delay) => {
+          setTimeout(() => {
+            if (isStopped()) return;
+            fireFn();
+          }, delay);
+        });
+      }
+
+      function showStoreOffer(storeUrl, storeLabel) {
+        const spin = document.getElementById("spin");
+        const storeLink = document.getElementById("storeLink");
+        const hint = document.getElementById("hint");
+        if (spin) spin.style.display = "none";
+        setStatus("Попробуйте перейти в приложение «Мой ID»");
+        if (storeLink) {
+          storeLink.href = storeUrl;
+          storeLink.textContent = storeLabel;
+          storeLink.style.display = "inline-block";
+        }
+        if (hint) {
+          hint.textContent =
+            "Нажмите красную кнопку ещё раз. Если «Мой ID» не установлен — скачайте приложение по ссылке ниже.";
+        }
+      }
+
+      function runColdStart(fireAuto, fireUser, storeUrl, storeLabel, retryDelays) {
+        let appEngaged = false;
+        let followUpStarted = false;
+        let offerShown = false;
+
+        const isStopped = () => offerShown;
+
+        const onAppEngaged = () => {
+          if (appEngaged) return;
+          appEngaged = true;
+          setStatus("Передаём ссылку в приложение…");
+          if (!followUpStarted) {
+            followUpStarted = true;
+            scheduleFollowUp(fireAuto, isStopped);
+          }
+        };
+
+        watchAppOpened(onAppEngaged);
+
+        const openLink = document.getElementById("openApp");
+        if (openLink) {
+          openLink.addEventListener("click", (e) => {
+            e.preventDefault();
+            fireUser();
+          });
+        }
+
+        retryDelays.forEach((delay) => {
+          setTimeout(() => {
+            if (offerShown) return;
+            fireAuto();
+          }, delay);
+        });
+
+        setTimeout(() => {
+          if (offerShown) return;
+          offerShown = true;
+          if (!document.hidden) showStoreOffer(storeUrl, storeLabel);
+        }, STORE_OFFER_MS);
+      }
+
+      function runAndroid(storeUrl, storeLabel) {
+        const isFirefoxAndroid = /Firefox/i.test(ua);
+        const openLink = document.getElementById("openApp");
+
+        const fireAuto = () => {
+          if (isFirefoxAndroid) {
+            window.location.href = APP_SCHEME;
+            return;
+          }
+          navigateViaHiddenAnchor(androidIntentUrl(storeUrl, false));
+        };
+
+        const fireUser = () => {
+          if (isFirefoxAndroid) {
+            window.location.href = APP_SCHEME;
+            return;
+          }
+          navigateViaHiddenAnchor(androidIntentUrl(storeUrl, true));
+        };
+
+        if (openLink) openLink.href = androidIntentUrl(storeUrl, true);
+
+        runColdStart(fireAuto, fireUser, storeUrl, storeLabel, DEEPLINK_RETRY_MS_ANDROID);
+      }
+
+      function runIos(storeUrl, storeLabel) {
+        const openLink = document.getElementById("openApp");
+        if (openLink) openLink.href = APP_SCHEME;
+
+        const fireAuto = () => {
+          navigateViaHiddenAnchor(APP_SCHEME);
+        };
+        const fireUser = () => {
+          window.location.href = APP_SCHEME;
+        };
+
+        runColdStart(fireAuto, fireUser, storeUrl, storeLabel, DEEPLINK_RETRY_MS_IOS);
+      }
+
+      (async () => {
+        const isIOS = /iPhone|iPad|iPod/i.test(ua);
+        const isAndroid = /Android/i.test(ua);
+        const isHuawei = isAndroid ? await detectHuawei() : false;
+        const storeUrl = isIOS ? IOS_STORE : isHuawei ? APP_GALLERY : RUSTORE;
+        const storeLabel = isIOS ? "App Store" : isHuawei ? "AppGallery" : "Скачать в RuStore";
+
+        const storeLink = document.getElementById("storeLink");
+        if (storeLink) storeLink.href = storeUrl;
+
+        if (isIOS) {
+          runIos(storeUrl, storeLabel);
+          return;
+        }
+
+        if (isAndroid) {
+          runAndroid(storeUrl, storeLabel);
+          return;
+        }
+
+        window.location.replace(RUSTORE);
+      })();
+    })();
+  </script>
+</body>
+</html>
