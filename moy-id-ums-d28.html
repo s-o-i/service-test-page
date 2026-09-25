@@ -1,11 +1,11 @@
 ﻿<!DOCTYPE html>
-<!-- moy-id-ums-d28 timing-v2: large_family; later iOS follow-up, fewer early pings -->
+<!-- moy-id-ums-d28 timing-v3: large_family; ums ios retry + extended follow-up tail -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
-  <title>Мой id · ums-d28 t2</title>
+  <title>Мой id · ums-d28 t3</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -58,7 +58,7 @@
 <body>
   <div>
     <div class="spin" id="spin" aria-hidden="true"></div>
-    <p id="build" style="font-size:0.75rem;color:#888">d28 timing-v2 · iOS follow-up from 1.2s</p>
+    <p id="build" style="font-size:0.75rem;color:#888">d28 timing-v3 · longer follow-up tail (iOS)</p>
     <p id="status">Запускаем «Мой ID»…</p>
     <a class="open-link" id="openApp" href="#">Перейти в «Мой ID»</a>
     <a class="store-link" id="storeLink" href="#">Скачать приложение</a>
@@ -76,10 +76,10 @@
       const COLD_START_GRACE_MS = 20000;
       const STORE_OFFER_MS = 20000;
 
-      /** v2 vs ums: iOS — без 400/900 ms, follow-up не раньше 1.2 s (меньше сбросов загрузки). */
-      const DEEPLINK_RETRY_MS_IOS = [0, 1500, 2800, 4500, 6500, 9000, 12000, 16000, 19000];
+      /** v3 vs ums: iOS retry как ums; после ухода в МП — дольше повторяем deeplink. */
+      const DEEPLINK_RETRY_MS_IOS = [0, 400, 900, 1500, 2500, 4000, 6000, 9000, 12000, 16000];
       const DEEPLINK_RETRY_MS_ANDROID = [0, 600, 1200, 2000, 3000, 4500, 6000, 8000, 10000, 12000, 14000, 16000, 18000];
-      const FOLLOWUP_AFTER_HIDE_MS = [1200, 2500, 4200, 6500, 9000, 12000];
+      const FOLLOWUP_AFTER_HIDE_MS = [400, 900, 1600, 2500, 4000, 6000, 8500, 11500, 15000, 19000];
 
       const ua = navigator.userAgent || "";
 
