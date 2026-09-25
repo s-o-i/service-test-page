@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- moy-id-ums cold-start-v2 ios-staged-v1: docs warmup then group large_family -->
+<!-- moy-id-ums cold-start-v2: type=large_family -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
@@ -229,30 +229,14 @@
       }
 
       function runIos(storeUrl, storeLabel) {
-        const IOS_WARMUP_SCHEME = "mosid://docs";
-        const IOS_DOC_STAGGER_MS = 1200;
-        let iosWarmupSent = false;
         const openLink = document.getElementById("openApp");
         if (openLink) openLink.href = APP_SCHEME;
 
-        const fireDocLink = (userGesture) => {
-          if (userGesture) window.location.href = APP_SCHEME;
-          else navigateViaHiddenAnchor(APP_SCHEME);
-        };
-
         const fireAuto = () => {
-          if (!iosWarmupSent) {
-            iosWarmupSent = true;
-            navigateViaHiddenAnchor(IOS_WARMUP_SCHEME);
-            setTimeout(() => fireDocLink(false), IOS_DOC_STAGGER_MS);
-            return;
-          }
-          fireDocLink(false);
+          navigateViaHiddenAnchor(APP_SCHEME);
         };
-
         const fireUser = () => {
-          window.location.href = IOS_WARMUP_SCHEME;
-          setTimeout(() => fireDocLink(true), IOS_DOC_STAGGER_MS);
+          window.location.href = APP_SCHEME;
         };
 
         runColdStart(fireAuto, fireUser, storeUrl, storeLabel, DEEPLINK_RETRY_MS_IOS);
