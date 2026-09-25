@@ -1,11 +1,11 @@
 ﻿<!DOCTYPE html>
-<!-- moy-id-ums-d28 cold-start-v2: details id=28 (lc clone, tune timings here) -->
+<!-- moy-id-ums-d28 timing-v1-late-ios: docs/details id=28 -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
-  <title>Мой id</title>
+  <title>Мой id · d28 t1</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -61,12 +61,15 @@
     <p id="status">Запускаем «Мой ID»…</p>
     <a class="open-link" id="openApp" href="#">Перейти в «Мой ID»</a>
     <a class="store-link" id="storeLink" href="#">Скачать приложение</a>
-    <p class="hint" id="hint">Подождите — при первом запуске приложение может грузиться дольше обычного.</p>
+    <p id="build" style="font-size:0.75rem;color:#888;margin-top:0.5rem">d28 timing-v1-late-ios</p>`n    <p class="hint" id="hint">Подождите — при первом запуске приложение может грузиться дольше обычного.</p>
   </div>
   <script>
     (() => {
-      const APP_PATH = "docs/details?id=28";
-      const APP_SCHEME = "mosid://" + APP_PATH;
+      const DOC_ID = "28";
+      const docDeepLink = new URL("mosid://docs/details");
+      docDeepLink.searchParams.set("id", DOC_ID);
+      const APP_SCHEME = docDeepLink.href;
+      const APP_PATH = "docs/details?id=" + encodeURIComponent(DOC_ID);
       const ANDROID_PKG = "ru.mos.myid";
       const IOS_STORE = "https://apps.apple.com/ru/app/%D0%BC%D0%BE%D0%B9-id/id1626803709";
       const RUSTORE = "https://apps.rustore.ru/app/ru.mos.myid";
@@ -75,9 +78,9 @@
       const COLD_START_GRACE_MS = 20000;
       const STORE_OFFER_MS = 20000;
 
-      const DEEPLINK_RETRY_MS_IOS = [0, 400, 900, 1500, 2500, 4000, 6000, 9000, 12000, 16000];
+      const DEEPLINK_RETRY_MS_IOS = [0, 2000, 4000, 7000, 10000, 14000, 18000];
       const DEEPLINK_RETRY_MS_ANDROID = [0, 600, 1200, 2000, 3000, 4500, 6000, 8000, 10000, 12000, 14000, 16000, 18000];
-      const FOLLOWUP_AFTER_HIDE_MS = [400, 1000, 2000, 3500, 5500, 8000];
+      const FOLLOWUP_AFTER_HIDE_MS = [1500, 3500, 6000, 9000, 12000];
 
       const ua = navigator.userAgent || "";
 
