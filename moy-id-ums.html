@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- moy-id-ums cold-start-v2 ios-gentle-v1: type=large_family fewer ios retries after hide -->
+<!-- moy-id-ums cold-start-v2: type=large_family (same logic as lc) -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
@@ -75,9 +75,7 @@
       const COLD_START_GRACE_MS = 20000;
       const STORE_OFFER_MS = 20000;
 
-      /** iOS: реже повторы, чтобы не сбрасывать загрузку документа (ЦУМС). */
-      const DEEPLINK_RETRY_MS_IOS = [0, 2500, 6000, 12000];
-      const FOLLOWUP_AFTER_HIDE_MS_IOS = [3000, 8000];
+      const DEEPLINK_RETRY_MS_IOS = [0, 400, 900, 1500, 2500, 4000, 6000, 9000, 12000, 16000];
       const DEEPLINK_RETRY_MS_ANDROID = [0, 600, 1200, 2000, 3000, 4500, 6000, 8000, 10000, 12000, 14000, 16000, 18000];
       const FOLLOWUP_AFTER_HIDE_MS = [400, 1000, 2000, 3500, 5500, 8000];
 
@@ -138,8 +136,8 @@
         window.addEventListener("pagehide", onLeft);
       }
 
-      function scheduleFollowUp(fireFn, isStopped, delays) {
-        (delays || FOLLOWUP_AFTER_HIDE_MS).forEach((delay) => {
+      function scheduleFollowUp(fireFn, isStopped) {
+        FOLLOWUP_AFTER_HIDE_MS.forEach((delay) => {
           setTimeout(() => {
             if (isStopped()) return;
             fireFn();
@@ -164,8 +162,7 @@
         }
       }
 
-      function runColdStart(fireAuto, fireUser, storeUrl, storeLabel, retryDelays, opts) {
-        opts = opts || {};
+      function runColdStart(fireAuto, fireUser, storeUrl, storeLabel, retryDelays) {
         let appEngaged = false;
         let followUpStarted = false;
         let offerShown = false;
@@ -178,7 +175,7 @@
           setStatus("Передаём ссылку в приложение…");
           if (!followUpStarted) {
             followUpStarted = true;
-            scheduleFollowUp(fireAuto, isStopped, opts.followUpDelays);
+            scheduleFollowUp(fireAuto, isStopped);
           }
         };
 
@@ -195,7 +192,6 @@
         retryDelays.forEach((delay) => {
           setTimeout(() => {
             if (offerShown) return;
-            if (opts.skipRetryAfterEngage && appEngaged) return;
             fireAuto();
           }, delay);
         });
@@ -243,10 +239,7 @@
           window.location.href = APP_SCHEME;
         };
 
-        runColdStart(fireAuto, fireUser, storeUrl, storeLabel, DEEPLINK_RETRY_MS_IOS, {
-          followUpDelays: FOLLOWUP_AFTER_HIDE_MS_IOS,
-          skipRetryAfterEngage: true,
-        });
+        runColdStart(fireAuto, fireUser, storeUrl, storeLabel, DEEPLINK_RETRY_MS_IOS);
       }
 
       (async () => {
